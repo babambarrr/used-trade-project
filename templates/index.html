@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중고거래 사이트</title>
+    <meta name="csrf-token" content="your-csrf-token">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+            transition: transform 0.3s ease-in-out;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group h2 {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .form-group button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        .toggle-link {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+            display: block;
+            margin-top: 10px;
+        }
+        .toggle-link:hover {
+            color: #0056b3;
+        }
+        #delete-account-btn, #register-product-btn {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        #delete-account-btn:disabled, #register-product-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div id="login-form" class="form-group">
+            <h2>로그인</h2>
+            <label for="login-user-id">사용자 ID</label>
+            <input type="text" id="login-user-id" required>
+            <label for="login-password">비밀번호</label>
+            <input type="password" id="login-password" required autocomplete="off">
+            <button type="button" onclick="login()">로그인</button>
+            <span class="toggle-link" onclick="toggleForms()">회원가입</span>
+        </div>
+        <div id="signup-form" class="form-group" style="display: none;">
+            <h2>회원가입</h2>
+            <label for="signup-user-id">사용자 ID</label>
+            <input type="text" id="signup-user-id" required>
+            <label for="signup-user-name">사용자 이름</label>
+            <input type="text" id="signup-user-name" required>
+            <label for="signup-password">비밀번호</label>
+            <input type="password" id="signup-password" required autocomplete="off">
+            <button type="button" onclick="signup()">회원가입</button>
+            <span class="toggle-link" onclick="toggleForms()">로그인</span>
+        </div>
+        <div id="delete-account-form" class="form-group" style="display: none;">
+            <h2>회원탈퇴</h2>
+            <label for="delete-user-id">사용자 ID</label>
+            <input type="text" id="delete-user-id" required>
+            <label for="delete-password">비밀번호</label>
+            <input type="password" id="delete-password" required autocomplete="off">
+            <button type="button" onclick="deleteAccount()">회원탈퇴</button>
+        </div>
+        <button id="delete-account-btn" type="button" onclick="showDeleteAccountForm()" disabled>회원탈퇴</button>
+        <div id="register-product-form" class="form-group" style="display: none;">
+            <h2>상품 등록</h2>
+            <label for="product-name">상품 이름</label>
+            <input type="text" id="product-name" required>
+            <label for="product-description">상품 설명</label>
+            <textarea id="product-description" required></textarea>
+            <label for="product-price">가격</label>
+            <input type="number" id="product-price" required>
+            <label for="product-image">상품 이미지 URL</label>
+            <input type="text" id="product-image" required>
+            <button type="button" onclick="registerProduct()">상품 등록</button>
+        </div>
+        <button id="register-product-btn" type="button" onclick="showRegisterProductForm()" disabled>상품 등록</button>
+    </div>
+    <script>
+        let isLoggedIn = false;
+
+        function validateInput(input, regex) {
+            return regex.test(input);
+        }
+
+        async function login() {
+            const userId = document.getElementById('login-user-id').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!userId || !password) {
+                alert("사용자 ID와 비밀번호를 입력하세요.");
+                return;
+            }
+
+            if (!validateInput(userId, /^[a-zA-Z0-9_-]+$/)) {
+                alert("유효하지 않은 사용자 ID 형식입니다.");
+                return;
+            }
+
+            const response = await fetch(`/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
+                body: JSON.stringify({ user_id: userId, password: password })
+            });
+
+            if (response.ok) {
+                alert('로그인 성공');
+                isLoggedIn = true;
+                document.getElementById('delete-account-btn').disabled = false;
+                document.getElementById('register-product-btn').disabled = false;
+                animateContainer();
+            } else {
+                alert('로그인 실패');
+            }
+        }
+
+        async function deleteAccount() {
+            const userId = document.getElementById('delete-user-id').value;
+            const password = document.getElementById('delete-password').value;
+
+            if (!userId || !password) {
+                alert("사용자 ID와 비밀번호를 입력하세요.");
+                return;
+            }
+
+            if (!validateInput(userId, /^[a-zA-Z0-9_-]+$/)) {
+                alert("유효하지 않은 사용자 ID 형식입니다.");
+                return;
+            }
+
+            const response = await fetch(`/delete_account`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
+                body: JSON.stringify({ user_id: userId, password: password })
+            });
+
+            if (response.ok) {
+                alert('회원탈퇴 성공');
+                isLoggedIn = false;
+                document.getElementById('delete-account-btn').disabled = true;
+                document.getElementById('register-product-btn').disabled = true;
+                document.getElementById('delete-account-form').style.display = 'none';
+                animateContainer();
+            } else {
+                alert('회원탈퇴 실패');
+            }
+        }
+
+        async function signup() {
+            const userId = document.getElementById('signup-user-id').value;
+            const userName = document.getElementById('signup-user-name').value;
+            const password = document.getElementById('signup-password').value;
+            const createdAt = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+
+            if (!userId || !userName || !password) {
+                alert("모든 필드를 입력하세요.");
+                return;
+            }
+
+            if (!validateInput(userId, /^[a-zA-Z0-9_-]+$/)) {
+                alert("유효하지 않은 사용자 ID 형식입니다.");
+                return;
+            }
+
+            const userData = {
+                user_id: userId,
+                user_name: userName,
+                point: 0,
+                password: password,
+                created_at: createdAt,
+                registered_products: [],
+                purchased_products: [],
+                liked_products: []
+            };
+
+            const response = await fetch('/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
+                body: JSON.stringify(userData)
+            });
+
+            if (response.ok) {
+                alert('회원가입 성공');
+            } else {
+                alert('회원가입 실패');
+            }
+        }
+
+        async function registerProduct() {
+            const userName = document.getElementById('signup-user-name').value;
+            const productName = document.getElementById('product-name').value;
+            const productDescription = document.getElementById('product-description').value;
+            const productPrice = document.getElementById('product-price').value;
+            const productImage = document.getElementById('product-image').value;
+
+            if (!userName || !productName || !productDescription || !productPrice || !productImage) {
+                alert("모든 필드를 입력하세요.");
+                return;
+            }
+
+            const productData = {
+                user_name: userName,
+                product_name: productName,
+                product_description: productDescription,
+                product_image: productImage,
+                product_id: Math.floor(Math.random() * 1000000),
+                product_price: productPrice
+            };
+
+            const response = await fetch('/register_product', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
+                body: JSON.stringify(productData)
+            });
+
+            if (response.ok) {
+                alert('상품 등록 성공');
+            } else {
+                alert('상품 등록 실패');
+            }
+        }
+
+        function toggleForms() {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
+            signupForm.style.display = signupForm.style.display === 'none' ? 'block' : 'none';
+            animateContainer();
+        }
+
+        function showDeleteAccountForm() {
+            document.getElementById('delete-account-form').style.display = 'block';
+            animateContainer();
+        }
+
+        function showRegisterProductForm() {
+            document.getElementById('register-product-form').style.display = 'block';
+            animateContainer();
+        }
+
+        function animateContainer() {
+            const container = document.getElementById('container');
+            container.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                container.style.transform = 'scale(1)';
+            }, 300);
+        }
+
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
+    </script>
+</body>
+</html>
